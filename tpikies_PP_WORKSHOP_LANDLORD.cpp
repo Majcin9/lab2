@@ -8,9 +8,8 @@ using namespace std;
 typedef struct Player {
  int position;
  int cash;
- int bid;
  int in_jail;
- int last_throw;
+ int moved;
 } Pl;
 
 typedef struct Field {
@@ -19,7 +18,7 @@ typedef struct Field {
  string name;
 }Fi;
 
-int main(int argc, char **argv) {
+int main() {
  int nPlayers = 2;
  int actualPlayer = 0;
 
@@ -31,6 +30,7 @@ int main(int argc, char **argv) {
  for (int i =0;i<nPlayers;i++) {
   players[i].position = 0;
   players[i].cash = 200;
+  players[i].moved = 0;
  }
 
  for (int i=0;i<BOARD_SIZE;i++) {
@@ -50,39 +50,55 @@ int main(int argc, char **argv) {
  while(cin >> s)
  {
   if(s == "MOVE") {
-   int argument;
-   do {
+    int argument, argument2 =0;
     cin >> argument;
-   }while(argument<1 || argument>6);
-
-   if (players[actualPlayer].position+argument >= BOARD_SIZE)
-    players[actualPlayer].cash += 100;
-
-   if (players[actualPlayer].in_jail != 1)
-    players[actualPlayer].position = (players[actualPlayer].position + argument) % BOARD_SIZE;
-   else {
-    if (players[actualPlayer].last_throw == argument) {
-     players[actualPlayer].position += 1;
-     players[actualPlayer].last_throw = 0;
-     players[actualPlayer].in_jail = 0;
-    }
-    else {
-     players[actualPlayer].last_throw = argument;
-    }
+   if (players[actualPlayer].moved == 1) {
+    cout << "ERROR: PLAYER P" << actualPlayer << " MOVED ALREADY\n";
    }
-
-   if (fields[players[actualPlayer].position].name == "JAIL")
-    players[actualPlayer].in_jail = 1;
    else {
-    if ((fields[players[actualPlayer].position].owner != actualPlayer) && fields[players[actualPlayer].position].owner != -1) {
-     if (players[actualPlayer].cash >= (fields[players[actualPlayer].position].cost/2)) {
-      players[actualPlayer].cash -= (fields[players[actualPlayer].position].cost/2);
-      players[fields[players[actualPlayer].position].owner].cash+=fields[players[actualPlayer].position].cost/2; //lol
+    if (cin.peek() == ' ' && players[actualPlayer].in_jail == 1) {
+     cin >> argument2;
+    }
+    if (argument > 6 || argument < 1) {
+     cout << "ERROR: IMPOSSIBLE DICE SIZE\n";
+    }
+    else{
+
+     if (fields[(players[actualPlayer].position+argument)].name == "JAIL") {
+      cout << "WELCOME TO JAIL P" << actualPlayer << "\n";
+     }
+
+     if (players[actualPlayer].in_jail != 1) {
+      if (players[actualPlayer].position+argument >= BOARD_SIZE)
+       players[actualPlayer].cash += 100;
+      players[actualPlayer].position = (players[actualPlayer].position + argument) % BOARD_SIZE;
      }
      else {
-      players[fields[players[actualPlayer].position].owner].cash+=players[actualPlayer].cash;
-      players[actualPlayer].cash = 0;
+      if (argument == argument2) {
+       players[actualPlayer].position +=1;
+       cout << "SEE YOU NEXT TIME P" << actualPlayer << "\n";
+      }
+      else
+       cout << "STILL IN GAOL P" << actualPlayer << "\n";
      }
+
+     if (fields[players[actualPlayer].position].name == "JAIL") {
+      players[actualPlayer].in_jail = 1;
+
+     }
+     else {
+      if ((fields[players[actualPlayer].position].owner != actualPlayer) && fields[players[actualPlayer].position].owner != -1) {
+       if (players[actualPlayer].cash >= (fields[players[actualPlayer].position].cost/2)) {
+        players[actualPlayer].cash -= (fields[players[actualPlayer].position].cost/2);
+        players[fields[players[actualPlayer].position].owner].cash+=fields[players[actualPlayer].position].cost/2; //lol
+       }
+       else {
+        players[fields[players[actualPlayer].position].owner].cash+=players[actualPlayer].cash;
+        players[actualPlayer].cash = 0;
+       }
+      }
+     }
+     players[actualPlayer].moved =1;
     }
    }
   }
@@ -93,11 +109,11 @@ int main(int argc, char **argv) {
    if(argument == 0)
    {
     cout << "PLAYER_ACTING: "<< actualPlayer << " ||| ";
-    string whichp = "P1: ";
+    string whichp = "P0: ";
     for (int i = 0;i<nPlayers;i++) {
-     const char c = (i+1) + '0';
+     const char c = i + '0';
      whichp[1] = c;
-     cout << whichp <<players[i].position<<" , "<< players[i].cash << " $ |";
+     cout << whichp <<players[i].position<<" , "<< players[i].cash << "$ | ";
     }
     cout << "\n";
    }
@@ -129,7 +145,7 @@ int main(int argc, char **argv) {
    if (who >=0 && who <=nPlayers) {
     players[who].cash=how_much;
    }
-
+  }
 
    else if( s == "BUY")
    {
@@ -141,7 +157,7 @@ int main(int argc, char **argv) {
     int price = fields[players[actualPlayer].position].cost;
     int property = players[actualPlayer].position;
     int winner = actualPlayer;
-    if (price>0 && fields[property].owner ==-1) {
+    if (price>0 && fields[property].owner == -1) {
      while(true)
      {
       string command;
@@ -168,32 +184,35 @@ int main(int argc, char **argv) {
      }
     }
    }
-   else if( s == "#") {
-    string a;
-    cin >> a;
+  else if( s == "#") {
+   string a,b,c;
+   cin >> a >> b >> c;
    }
-   else if( s == "SELL"){
-    string property_name;
-    cin >> property_name;
-    for (int i = 0;i<BOARD_SIZE;i++) {
-     if ((fields[i].name == property_name) && fields[i].owner == actualPlayer) {
-      fields[i].owner = -1;
-      players[actualPlayer].cash += (fields[i].cost)/2;
+  else if( s == "SELL"){
+   int property_num;
+   cin >> property_num;
+   if (fields[property_num].owner != actualPlayer) {
+    cout << "ERROR: P" << actualPlayer << " SELLING UNOWNED PROPERTY\n";
+   }
+   else{
+      fields[property_num].owner = -1;
+      players[actualPlayer].cash += (fields[property_num].cost/2);
      }
-    }
+
    }
-   else if( s== "END_TURN"){
-    players[actualPlayer].last_throw = 0;
+  else if( s== "END_TURN"){
+    players[actualPlayer].moved =0;
     actualPlayer = (++actualPlayer) % nPlayers;
    }
-   else
+  else if (s=="END_GAME") {
+   return -1;
+  }
+  else
    {
     cout << "UNKNOWN COMMAND: "<<s;
     cout.flush();
     return -1;
    }
   }
-
- }
  return 0;
-}
+ }
