@@ -10,6 +10,7 @@ typedef struct Player {
  int cash;
  int in_jail;
  int moved;
+ string name;
 } Pl;
 
 typedef struct Field {
@@ -26,11 +27,14 @@ int main() {
  Fi fields[BOARD_SIZE];
 
 
-
+ string name_template = "P0";
  for (int i =0;i<nPlayers;i++) {
+  char player_number = (char)i + '0';
+  name_template[1] = player_number;
   players[i].position = 0;
   players[i].cash = 200;
   players[i].moved = 0;
+  players[i].name = name_template;
  }
 
  for (int i=0;i<BOARD_SIZE;i++) {
@@ -53,7 +57,7 @@ int main() {
     int argument, argument2 =0;
     cin >> argument;
    if (players[actualPlayer].moved == 1) {
-    cout << "ERROR: PLAYER P" << actualPlayer << " MOVED ALREADY\n";
+    cout << "ERROR: PLAYER " << players[actualPlayer].name << " MOVED ALREADY\n";
    }
    else {
     if (cin.peek() == ' ' && players[actualPlayer].in_jail == 1) {
@@ -65,7 +69,7 @@ int main() {
     else{
 
      if (fields[(players[actualPlayer].position+argument)].name == "JAIL") {
-      cout << "WELCOME TO JAIL P" << actualPlayer << "\n";
+      cout << "WELCOME TO JAIL "  << players[actualPlayer].name << "\n";
      }
 
      if (players[actualPlayer].in_jail != 1) {
@@ -76,10 +80,10 @@ int main() {
      else {
       if (argument == argument2) {
        players[actualPlayer].position +=1;
-       cout << "SEE YOU NEXT TIME P" << actualPlayer << "\n";
+       cout << "SEE YOU NEXT TIME " << players[actualPlayer].name << "\n";
       }
       else
-       cout << "STILL IN GAOL P" << actualPlayer << "\n";
+       cout << "STILL IN GAOL " << players[actualPlayer].name << "\n";
      }
 
      if (fields[players[actualPlayer].position].name == "JAIL") {
@@ -109,11 +113,8 @@ int main() {
    if(argument == 0)
    {
     cout << "PLAYER_ACTING: "<< actualPlayer << " ||| ";
-    string whichp = "P0: ";
     for (int i = 0;i<nPlayers;i++) {
-     const char c = i + '0';
-     whichp[1] = c;
-     cout << whichp <<players[i].position<<" , "<< players[i].cash << "$ | ";
+     cout << players[i].name << ": "<<players[i].position<<" , "<< players[i].cash << "$ | ";
     }
     cout << "\n";
    }
@@ -165,7 +166,7 @@ int main() {
       if(command == "END"){
        players[winner].cash-=price;
        fields[property].owner = winner;
-       cout << "P" << winner << " WON THE AUCTION\n";
+       cout << players[winner].name << " WON THE AUCTION\n";
        break;
       }
       if(command == "BID"){
@@ -184,15 +185,20 @@ int main() {
      }
     }
    }
+  else if (s == "ADD_PLAYER") {
+   int i, x;
+   string n;
+
+  }
   else if( s == "#") {
-   string a,b,c;
-   cin >> a >> b >> c;
+   string a;
+   getline(cin, a);
    }
   else if( s == "SELL"){
    int property_num;
    cin >> property_num;
    if (fields[property_num].owner != actualPlayer) {
-    cout << "ERROR: P" << actualPlayer << " SELLING UNOWNED PROPERTY\n";
+    cout << "ERROR: " << players[actualPlayer].name << " SELLING UNOWNED PROPERTY\n";
    }
    else{
       fields[property_num].owner = -1;
