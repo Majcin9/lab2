@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #define MAX_PLAYERS 10
-#define BOARD_SIZE 11
+#define MAX_BOARD_SIZE 100
 
 using namespace std;
 
@@ -11,79 +11,120 @@ typedef struct Player {
  int in_jail;
  int moved;
  string name;
+ int tried_to_end;
+ int in_workhouse;
 } Pl;
 
 typedef struct Field {
- int owner;
+ string owner;
  int cost;
  string name;
+ string type;
+ string deedOwner;
 }Fi;
 
 int main() {
  int nPlayers = 2;
  int actualPlayer = 0;
-
+ int BOARD_SIZE = 11;
  Pl players[MAX_PLAYERS];
- Fi fields[BOARD_SIZE];
-
-
+ Fi fields[MAX_BOARD_SIZE];
  string name_template = "P0";
  for (int i =0;i<nPlayers;i++) {
-  char player_number = (char)i + '0';
+  const char player_number = (char)i + '0';
   name_template[1] = player_number;
   players[i].position = 0;
   players[i].cash = 200;
   players[i].moved = 0;
   players[i].name = name_template;
+  players[i].tried_to_end = 0;
+  players[i].in_workhouse = 0;
  }
 
  for (int i=0;i<BOARD_SIZE;i++) {
-  fields[i].owner = -1;
+  fields[i].owner = "NONE";
   fields[i].cost =0;
  }
- fields[7].name = "JAIL";
- fields[8].name = "SHELTER";
+ fields[0].type = "START";
+ fields[1].type = "PROPERTY";
+ fields[2].type = "PROPERTY";
+ fields[3].type = "PROPERTY";
+ fields[4].type = "WORKSHOP";
+ fields[5].type = "UTILITY";
+ fields[6].type = "TRAIN";
+ fields[7].type = "JAIL";
+ fields[8].type = "SHELTER";
+ fields[9].type = "CHANCE";
+ fields[10].type = "TAXES";
 
+ fields[0].name = "START";
  fields[1].cost = 50, fields[1].name = "A1";
  fields[2].cost = 80, fields[2].name = "A2";
  fields[3].cost = 100, fields[3].name = "A3";
- fields[5].cost = 50, fields[5].name = "U1";
- fields[6].cost = 50, fields[6].name = "T1";
+ fields[4].name = "WORKHOUSE";
+ fields[5].cost = 50, fields[5].name = "UTILITY 1";
+ fields[6].cost = 50, fields[6].name = "TRAIN 1";
+ fields[7].name = "JAIL";
+ fields[8].name = "SHELTER";
+ fields[9].name = "CHANCE";
+ fields[10].name = "TAXES";
 
  string s;
  while(cin >> s)
  {
   if(s == "MOVE") {
-    int argument, argument2 =0;
+    int argument =0;
     cin >> argument;
    if (players[actualPlayer].moved == 1) {
-    cout << "ERROR: PLAYER " << players[actualPlayer].name << " MOVED ALREADY\n";
+    cout <<players[actualPlayer].name << " MOVED ALREADY\n";
    }
    else {
+    int argument2 = 0;
+        int shelter_pos = 8;
+        for (int i =0;i<BOARD_SIZE;i++)
+          if (fields[i].type == "SHELTER")
+            shelter_pos = i;
     if (cin.peek() == ' ' && players[actualPlayer].in_jail == 1) {
      cin >> argument2;
     }
     if (argument > 6 || argument < 1) {
-     cout << "ERROR: IMPOSSIBLE DICE SIZE\n";
+     cout << players[actualPlayer].name << " ERROR: IMPOSSIBLE DICE SIZE\n";
     }
     else{
-
-     if (fields[(players[actualPlayer].position+argument)].name == "JAIL") {
-      cout << "WELCOME TO JAIL "  << players[actualPlayer].name << "\n";
-     }
-
-     if (players[actualPlayer].in_jail != 1) {
-      if (players[actualPlayer].position+argument >= BOARD_SIZE)
-       players[actualPlayer].cash += 100;
-      players[actualPlayer].position = (players[actualPlayer].position + argument) % BOARD_SIZE;
-     }
-     else {
-      if (argument == argument2) {
-       players[actualPlayer].position +=1;
-       cout << "SEE YOU NEXT TIME " << players[actualPlayer].name << "\n";
+      if (players[actualPlayer].in_workhouse){
+        players[actualPlayer].cash+=argument;
+        if (players[actualPlayer].cash>0){
+          cout << players[actualPlayer].name << " YOUR DEBTS ARE PAID, YOU ARE MOVED TO NEAREST SHELTER\n";
+          players[actualPlayer].in_workhouse = 0;
+          players[actualPlayer].position = shelter_pos;
+        }
+        else {
+          cout << players[actualPlayer].name << " STILL IN WORKHOUSE \n";
+        }
       }
-      else
-       cout << "STILL IN GAOL " << players[actualPlayer].name << "\n";
+      else if (fields[(players[actualPlayer].position+argument)].type == "JAIL") {
+        cout << players[actualPlayer].name << " WELCOME TO JAIL \n";
+        players[actualPlayer].in_jail = 1;
+       int jail_pos = 0;
+        for (int i = 0;i<BOARD_SIZE;i++)
+         if (fields[i].type == "JAIL")
+          jail_pos = i;
+        players[actualPlayer].position = jail_pos;
+
+      }
+
+      else if (players[actualPlayer].in_jail != 1) {
+       if (players[actualPlayer].position+argument >= BOARD_SIZE)
+        players[actualPlayer].cash += 100;
+       players[actualPlayer].position = (players[actualPlayer].position + argument) % BOARD_SIZE;
+      }
+      else {
+       if (argument == argument2) {
+        players[actualPlayer].position = shelter_pos;
+        cout  << players[actualPlayer].name << " SEE YOU NEXT TIME \n";
+       }
+       else
+        cout << players[actualPlayer].name << " STILL IN GAOL \n";
      }
 
      if (fields[players[actualPlayer].position].name == "JAIL") {
@@ -91,14 +132,21 @@ int main() {
 
      }
      else {
-      if ((fields[players[actualPlayer].position].owner != actualPlayer) && fields[players[actualPlayer].position].owner != -1) {
+       int owner_index;
+       for (int i = 0;i<nPlayers;i++){
+         if (fields[players[actualPlayer].position].owner == players[i].name)
+           owner_index = i;
+       }
+      if ((owner_index != actualPlayer) && fields[players[actualPlayer].position].owner != "NONE") {
        if (players[actualPlayer].cash >= (fields[players[actualPlayer].position].cost/2)) {
         players[actualPlayer].cash -= (fields[players[actualPlayer].position].cost/2);
-        players[fields[players[actualPlayer].position].owner].cash+=fields[players[actualPlayer].position].cost/2; //lol
+        players[owner_index].cash+=fields[players[actualPlayer].position].cost/2; //lol
        }
        else {
-        players[fields[players[actualPlayer].position].owner].cash+=players[actualPlayer].cash;
-        players[actualPlayer].cash = 0;
+        players[owner_index].cash+=fields[players[actualPlayer].position].cost/2;
+        players[actualPlayer].cash -=fields[players[actualPlayer].position].cost/2;
+        if (players[actualPlayer].cash<0)
+          cout << players[actualPlayer].name << " YOU HAVE DEBT. SELL SOMETHING OR YOU GO INTO WORKHOUSE.\n";
        }
       }
      }
@@ -120,7 +168,27 @@ int main() {
    }
    else  if(argument == 1)
    {
+      cout << "Tile no., Tile Name, Owner Name, Base Price, Land Rent, Players Standing \n";
+      for (int i = 0;i<BOARD_SIZE;i++){
 
+        int howmany = 0;
+
+        for (int j = 0;j<nPlayers;j++)
+          if (players[j].position == i)
+            howmany +=j+1;
+
+        cout << i << " " << fields[i].name << " ";
+        if (fields[i].owner == "NONE")
+          cout << "- ";
+        else 
+          cout << fields[i].owner << " ";
+        if (fields[i].cost > 0)
+          cout << fields[i].cost << " " << fields[i].cost/2 << " ";
+        else 
+          cout << "- - ";
+
+        cout << howmany << "\n";
+      }
    }
   }
   else if(s == "SET_N_PLAYERS") {
@@ -158,15 +226,16 @@ int main() {
     int price = fields[players[actualPlayer].position].cost;
     int property = players[actualPlayer].position;
     int winner = actualPlayer;
-    if (price>0 && fields[property].owner == -1) {
-     while(true)
-     {
+    if (price>0 && fields[property].owner == "NONE") {
+     while(true) {
       string command;
       cin >> command;
       if(command == "END"){
        players[winner].cash-=price;
-       fields[property].owner = winner;
+       fields[property].owner = players[winner].name;
        cout << players[winner].name << " WON THE AUCTION\n";
+       if (players[winner].cash <0)
+        cout << players[winner].name << " YOU HAVE DEBT. SELL SOMETHING OR YOU GO INTO WORKHOUSE\n";
        break;
       }
       if(command == "BID"){
@@ -174,21 +243,68 @@ int main() {
        int bidValue;
        cin >> player;
        cin >> bidValue;
-       if (players[player].cash>=bidValue && ((bidValue>price) || (bidValue>=fields[players[actualPlayer].position].cost))) {
-        price = bidValue;
-        winner = player;
+       if (bidValue < fields[players[actualPlayer].position].cost){
+        cout << players[player].name << " CANNOT BID FOR LESS THAN INITIAL PRICE\n";
+       }
+       else if (price == fields[players[actualPlayer].position].cost) {
+        if (bidValue>=price) {
+         price = bidValue;
+         winner = player;
+        }
+       }
+       else if (bidValue <= price) {
+        cout << players[player].name << " CANNOT BID FOR LESS OR EQUAL\n";
        }
        else {
-        cout << "CANNOT BID FOR LESS\n";
+        if (bidValue>price) {
+         price = bidValue;
+         winner = player;
+        }
        }
       }
      }
     }
    }
+  else if (s =="ADD_TILE") {
+   string t,n;
+   cin >> t >> n;
+   BOARD_SIZE++;
+   fields[BOARD_SIZE-1].type = t;
+   fields[BOARD_SIZE-1].name= n;
+   if ((fields[BOARD_SIZE-1].type == "PROPERTY") || (fields[BOARD_SIZE-1].type == "UTILITY") || (fields[BOARD_SIZE-1].type == "TRAIN")) {
+    int price;
+    string deed,owner;
+    cin >> price >> deed >> owner;
+    fields[BOARD_SIZE-1].cost = price;
+    fields[BOARD_SIZE-1].deedOwner = deed;
+    fields[BOARD_SIZE-1].owner = owner;
+   }
+  }
+  else if (s == "NULL_BOARD_AND_PLAYERS") {
+   for (int i =0;i<nPlayers;i++) {
+    players[i].cash =0;
+    players[i].name="";
+    players[i].in_jail=0;
+    players[i].position =0;
+    players[i].moved=0;
+   }
+   for (int i =0;i<BOARD_SIZE;i++) {
+    fields[i].owner ="NONE";
+    fields[i].name="";
+    fields[i].cost=0;
+   }
+   nPlayers = 0;
+   BOARD_SIZE = 0;
+  }
   else if (s == "ADD_PLAYER") {
    int i, x;
    string n;
-
+   cin >> i >> x >> n;
+   nPlayers+=1;
+   players[nPlayers-1].position = i;
+   players[nPlayers-1].cash = x;
+   if (n.length()<=10)
+    players[nPlayers-1].name = n;
   }
   else if( s == "#") {
    string a;
@@ -197,19 +313,40 @@ int main() {
   else if( s == "SELL"){
    int property_num;
    cin >> property_num;
-   if (fields[property_num].owner != actualPlayer) {
-    cout << "ERROR: " << players[actualPlayer].name << " SELLING UNOWNED PROPERTY\n";
+   if (fields[property_num].owner != players[actualPlayer].name) {
+    cout << players[actualPlayer].name << " SELLING UNOWNED PROPERTY\n";
    }
    else{
-      fields[property_num].owner = -1;
+      fields[property_num].owner = "NONE";
       players[actualPlayer].cash += (fields[property_num].cost/2);
      }
 
    }
   else if( s== "END_TURN"){
+    if (players[actualPlayer].cash<0){
+      if (players[actualPlayer].tried_to_end == 1){
+        int work_pos = 0;
+        for (int i = 0;i<BOARD_SIZE;i++)
+          if (fields[i].type == "WORKSHOP")
+            work_pos = i;
+        if (players[actualPlayer].in_workhouse != 1)
+         cout << players[actualPlayer].name << " DUE TO YOUR DEBTS YOU ARE FORCED INTO CLOSEST WORKHOUSE.\n";
+        players[actualPlayer].position = work_pos;
+        players[actualPlayer].in_workhouse = 1;
+        players[actualPlayer].moved =0;
+        actualPlayer = (++actualPlayer) % nPlayers;
+        
+      }
+      else {
+      players[actualPlayer].tried_to_end+=1;
+      cout << players[actualPlayer].name << " YOU HAVE DEBTS. YOU CANNOT END TURN. YOU HAVE TO SELL SOMETHING.\n";
+      }
+    }
+    else { 
     players[actualPlayer].moved =0;
     actualPlayer = (++actualPlayer) % nPlayers;
-   }
+    }
+ }
   else if (s=="END_GAME") {
    return -1;
   }
