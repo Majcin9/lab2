@@ -24,6 +24,7 @@ typedef struct Field {
 }Fi;
 
 int main() {
+  int prebuy_phase = 0;
  int nPlayers = 2;
  int actualPlayer = 0;
  int BOARD_SIZE = 11;
@@ -44,6 +45,7 @@ int main() {
  for (int i=0;i<BOARD_SIZE;i++) {
   fields[i].owner = "NONE";
   fields[i].cost =0;
+  fields[i].deedOwner = "NONE";
  }
  fields[0].type = "START";
  fields[1].type = "PROPERTY";
@@ -78,12 +80,15 @@ int main() {
    if (players[actualPlayer].moved == 1) {
     cout <<players[actualPlayer].name << " MOVED ALREADY\n";
    }
+   else if(prebuy_phase){
+    cout << "NOT POSSIBLE - ONLY BUYING OF PROPERTIES WITH DEEDS POSSIBLE\n";
+   }
    else {
     int argument2 = 0;
-        int shelter_pos = 8;
-        for (int i =0;i<BOARD_SIZE;i++)
-          if (fields[i].type == "SHELTER")
-            shelter_pos = i;
+    int shelter_pos = 8;
+    for (int i =0;i<BOARD_SIZE;i++)
+      if (fields[i].type == "SHELTER")
+        shelter_pos = i;
     if (cin.peek() == ' ' && players[actualPlayer].in_jail == 1) {
      cin >> argument2;
     }
@@ -132,7 +137,7 @@ int main() {
 
      }
      else {
-       int owner_index;
+       int owner_index = -1;
        for (int i = 0;i<nPlayers;i++){
          if (fields[players[actualPlayer].position].owner == players[i].name)
            owner_index = i;
@@ -176,12 +181,18 @@ int main() {
         for (int j = 0;j<nPlayers;j++)
           if (players[j].position == i)
             howmany +=j+1;
+        if (fields[i].deedOwner != "NONE"){
 
+        }
         cout << i << " " << fields[i].name << " ";
-        if (fields[i].owner == "NONE")
+        if ((fields[i].owner == "NONE") && ((fields[i].deedOwner == "NONE") || (!prebuy_phase)))
           cout << "- ";
-        else 
+        else if (fields[i].owner != "NONE"){ 
           cout << fields[i].owner << " ";
+        }
+        else{
+          cout << "(" << fields[i].deedOwner << ") ";
+        }
         if (fields[i].cost > 0)
           cout << fields[i].cost << " " << fields[i].cost/2 << " ";
         else 
@@ -215,15 +226,27 @@ int main() {
     players[who].cash=how_much;
    }
   }
-
+  else if (s == "ENABLE_PREBUYING"){
+    prebuy_phase = 1;
+  }
    else if( s == "BUY")
    {
-    // Check whose turn it is, check if the property is not occupied and sellable
-    // The rules of selling are as follows:
-    // There is an auction, the bids are specified in the form Px y, which means that the player x offers y for the property.
-    // The initial price is the worth of the property.
-
     int price = fields[players[actualPlayer].position].cost;
+    if (prebuy_phase){
+      int pole;
+      cin >> pole;
+      if ((fields[pole-1].deedOwner == players[actualPlayer].name) && (players[actualPlayer].cash>=fields[pole-1].cost)){
+        fields[pole-1].owner = players[actualPlayer].name;
+        players[actualPlayer].cash-=fields[pole-1].cost;
+      }
+      else if (players[actualPlayer].cash<fields[pole-1].cost){
+        cout << players[actualPlayer].name << " NOT ENOUGH MONEY\n";
+      }
+      else{
+        cout << players[actualPlayer].name << " NO DEED\n";
+      }
+    }
+    else{
     int property = players[actualPlayer].position;
     int winner = actualPlayer;
     if (price>0 && fields[property].owner == "NONE") {
@@ -264,6 +287,7 @@ int main() {
       }
      }
     }
+    }
    }
   else if (s =="ADD_TILE") {
    string t,n;
@@ -292,6 +316,7 @@ int main() {
     fields[i].owner ="NONE";
     fields[i].name="";
     fields[i].cost=0;
+    fields[i].deedOwner = "NONE";
    }
    nPlayers = 0;
    BOARD_SIZE = 0;
@@ -343,8 +368,10 @@ int main() {
       }
     }
     else { 
-    players[actualPlayer].moved =0;
-    actualPlayer = (++actualPlayer) % nPlayers;
+      if ((actualPlayer == nPlayers-1) && (prebuy_phase))
+        prebuy_phase = 0;
+      players[actualPlayer].moved =0;
+      actualPlayer = (++actualPlayer) % nPlayers;
     }
  }
   else if (s=="END_GAME") {
